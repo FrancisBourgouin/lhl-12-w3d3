@@ -3,45 +3,47 @@ const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const cookieSession = require('cookie-session')
 const app = express()
-const bcrypt = require('bcrypt');
-const uuidv4 = require('uuid/v4');
+const bcrypt = require('bcrypt')
+const uuidv4 = require('uuid/v4')
 
 
-const saltRounds = 10;
+const saltRounds = 10
 const port = 3000
 
-app.use(express.static('public'));
+app.use(express.static('public'))
 app.use(cookieParser())
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(cookieSession({
   name: 'supersession',
   keys: ['Iliketocookpotatoesinthedark', 'Lifeishardwhenthepotatoesarenotfreshandmushy']
 }))
 
 
-app.set('view engine', 'ejs');
+app.set('view engine', 'ejs')
 
+const saltedPassword1 = bcrypt.hashSync("password1", saltRounds);
+const saltedPockPock  = bcrypt.hashSync("pockpock", saltRounds);
 const userDatabaseIsh = {
   "pi31415" : {
     id: "pi31415",
     username: "Francis",
     fullname: "Francis Bourgouin",
-    password: "password1"
+    password: saltedPassword1 //"password1"
   },
   "e2718294" : {
     id:"e2718294",
     username: "Chicken",
     fullname: "Pequeno Chicken de la Pampa",
-    password: "pockpock"
+    password: saltedPockPock //"pockpock"
   }
 }
-
+console.log(userDatabaseIsh)
 const authenticate = (username, password) => {
   for (const userId in userDatabaseIsh) {
     const currentUser = userDatabaseIsh[userId]
     if (currentUser.username === username) {
     //   if (currentUser.password === password) { //plaintext password
-      if (bcrypt.compareSync(currentUser.password, password)) {
+      if (bcrypt.compareSync(password, currentUser.password)) {
         return {valid:true, id: currentUser.id}
       } else {
         console.log('Password for user is bad')
@@ -77,6 +79,7 @@ app.get('/', (req,res) => {
 app.post('/login', (req,res) => {
 //   const userId = req.body.userId ? req.body.userId : "";
 //   res.cookie('userId', userId)
+  console.log(req.body)
   const authentication = authenticate(req.body.username, req.body.password)
   const valid = authentication.valid
   const userId = authentication.id

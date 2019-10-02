@@ -1,4 +1,4 @@
-# W2D4 - User Authentication with Express
+# W3D3 - User Authentication with Express
 
 ## http is stateless
 
@@ -16,7 +16,7 @@ what is state?
 
 - Scalability - no session related dependency
 - Less complex - less synchroniztion
-- Easier to chache
+- Easier to cache
 - The server cannot lose track of information
 
 ### Disadvantages
