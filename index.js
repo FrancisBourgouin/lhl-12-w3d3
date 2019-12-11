@@ -1,115 +1,132 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const cookieParser = require('cookie-parser')
-const cookieSession = require('cookie-session')
-const app = express()
-const bcrypt = require('bcrypt')
-const uuidv4 = require('uuid/v4')
+const express = require("express");
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
+const { compareSync, hashSync } = require("bcrypt");
+const app = express();
 
+const port = 3000;
 
-const saltRounds = 10
-const port = 3000
+app.use(express.static("public"));
+app.use(cookieParser());
+app.use(
+  cookieSession({
+    name: "session",
+    keys: ["randomkeyhahahahahahah", "clealeatoirehahahahaha"]
+  })
+);
 
-app.use(express.static('public'))
-app.use(cookieParser())
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(cookieSession({
-  name: 'supersession',
-  keys: ['Iliketocookpotatoesinthedark', 'Lifeishardwhenthepotatoesarenotfreshandmushy']
-}))
+app.use(bodyParser.urlencoded({ extended: false }));
 
+app.set("view engine", "ejs");
 
-app.set('view engine', 'ejs')
+const francisbPassword = hashSync("1234", 10);
+const littlechickenPassword = hashSync("pockpock", 10);
 
-const saltedPassword1 = bcrypt.hashSync("password1", saltRounds);
-const saltedPockPock  = bcrypt.hashSync("pockpock", saltRounds);
-const userDatabaseIsh = {
-  "pi31415" : {
-    id: "pi31415",
-    username: "Francis",
+const fakeUserDatabase = {
+  francisb: {
+    username: "francisb",
     fullname: "Francis Bourgouin",
-    password: saltedPassword1 //"password1"
+    password: francisbPassword
   },
-  "e2718294" : {
-    id:"e2718294",
-    username: "Chicken",
-    fullname: "Pequeno Chicken de la Pampa",
-    password: saltedPockPock //"pockpock"
+  littlechicken: {
+    username: "littlechicken",
+    fullname: "Pequeño Pollo de la Pampa",
+    password: littlechickenPassword
   }
-}
-console.log(userDatabaseIsh)
-const authenticate = (username, password) => {
-  for (const userId in userDatabaseIsh) {
-    const currentUser = userDatabaseIsh[userId]
-    if (currentUser.username === username) {
-    //   if (currentUser.password === password) { //plaintext password
-      if (bcrypt.compareSync(password, currentUser.password)) {
-        return {valid:true, id: currentUser.id}
+};
+
+console.log(fakeUserDatabase);
+
+const validateUser = (username, password) => {
+  for (const userKey in fakeUserDatabase) {
+    const user = fakeUserDatabase[userKey];
+
+    if (user.username === username) {
+      // if (user.password === password) {
+      if (compareSync(password, user.password)) {
+        //Properly logged in action
+        return { valid: true, error: null };
       } else {
-        console.log('Password for user is bad')
-        return { valid: false, id: null }
+        return { valid: false, error: "Bad password" };
       }
     }
   }
-  console.log('Username is not matching')
-  return {valid: false, id: null}
-}
+  return { valid: false, error: "Bad username" };
+};
 
-app.get('/', (req,res) => {
-//   const username = req.cookies.userId ? userDatabaseIsh[req.cookies.userId].username : "Guest"
-  let username = "Guest"
-  let fullname = "Mister Guest"
-  //   if (req.cookies.userId && userDatabaseIsh[req.cookies.userId]) {
-  //     username = userDatabaseIsh[req.cookies.userId].username
-  //     fullname = userDatabaseIsh[req.cookies.userId].fullname
+app.get("/", (req, res) => {
+  const templateVars = { user: fakeUserDatabase[req.session.username] };
+  res.render("index", templateVars);
+});
 
-  //     // { username, fullname } = userDatabaseIsh[req.cookies.userId]
-  //   }
-  if (req.session.userId && userDatabaseIsh[req.session.userId]) {
-    username = userDatabaseIsh[req.session.userId].username
-    fullname = userDatabaseIsh[req.session.userId].fullname
+app.get("/login", (req, res) => {
+  res.render("login");
+});
 
-    // { username, fullname } = userDatabaseIsh[req.cookies.userId]
-  }
-  console.log(req.session)
-  const templateVars = {username, fullname}
-  res.render('home', templateVars)
-})
+// app.post("/login", (req, res) => {
+//   for (const userKey in fakeUserDatabase) {
+//     const user = fakeUserDatabase[userKey];
 
-app.post('/login', (req,res) => {
-//   const userId = req.body.userId ? req.body.userId : "";
-//   res.cookie('userId', userId)
-  console.log(req.body)
-  const authentication = authenticate(req.body.username, req.body.password)
-  const valid = authentication.valid
-  const userId = authentication.id
+//     if (user.username === req.body.username) {
+//       if (user.password === req.body.password) {
+//         //Properly logged in action
+//         res.cookie("username", req.body.username);
+//         res.redirect("/");
+//       } else {
+//         console.log("Bad password");
+//         res.status(403).redirect("/login");
+//       }
+//     }
+//   }
+//   console.log("Bad username");
+//   res.status(403).redirect("/login");
+// });
+
+// app.post("/login", (req, res) => {
+//   const validation = validateUser(req.body.username, req.body.password);
+
+//   if (validation.valid) {
+//     res.cookie("username", req.body.username);
+//     res.redirect("/");
+//   } else {
+//     console.log(validation.error);
+//     res.status(403).redirect("/login");
+//   }
+// });
+
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  const { valid, error } = validateUser(username, password);
+
   if (valid) {
-    res.cookie('userId', userId)
-    req.session.userId = userId
+    // res.cookie("username", username);
+    req.session.username = username;
+    res.redirect("/");
   } else {
-    res.clearCookie('userId')
-    delete req.session.userId
+    console.log(error);
+    res.status(403).redirect("/login");
   }
-  res.redirect('/')
-})
+});
 
-app.post('/register', (req,res) => {
-  const userId = uuidv4().slice(0,8)
-  const {username, fullname, password} = req.body
-  const hashedPassword = bcrypt.hashSync(password, saltRounds);
+app.post("/logout", (req, res) => {
+  // res.clearCookie("username");
+  delete req.session.username;
+  res.redirect("/");
+});
 
-  userDatabaseIsh[userId] = {
-    id: userId,
+app.post("/register", (req, res) => {
+  const { username, fullname, password } = req.body;
+  const hashedPassword = hashSync(password, 10);
+
+  fakeUserDatabase[username] = {
     username,
     fullname,
     password: hashedPassword
-  }
+  };
 
-  console.log(userDatabaseIsh[userId])
-
-  req.session.userId = userId
-
-  res.redirect('/')
-})
+  req.session.username = username;
+  res.redirect("/");
+});
 
 app.listen(port, () => console.log(`Express server running on port ${port}`));
